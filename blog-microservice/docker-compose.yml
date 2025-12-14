@@ -1,0 +1,63 @@
+version: "3.8"
+services:
+  mongo:
+    image: mongo:6
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mongoadmin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  post-service:
+    build:
+      context: ./post-service
+      dockerfile: Dockerfile
+    environment:
+      - SPRING_DATASOURCE_URL=mongodb://mongoadmin:password123@mongo:27017/postdb
+    depends_on:
+      - mongo
+    ports:
+      - "8080:8080"
+
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    depends_on:
+      - mongo
+    environment:
+      - SERVER_PORT=8081
+      - SPRING_DATASOURCE_URL=mongodb://mongoadmin:password123@mongo:27017/authdb
+    ports:
+      - "8081:8081"
+
+  comment-service:
+    build:
+      context: ./comment-service
+      dockerfile: Dockerfile
+    depends_on:
+      - mongo
+    environment:
+      - SERVER_PORT=8082
+      - SPRING_DATASOURCE_URL=mongodb://mongoadmin:password123@mongo:27017/commentdb
+    ports:
+      - "8082:8082"
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    depends_on:
+      - post-service
+      - auth-service
+      - comment-service
+    environment:
+      - SERVER_PORT=8083
+    ports:
+      - "8083:8083"
+
+volumes:
+  mongo-data:
